@@ -91,6 +91,7 @@ def get_apod():
 
         root = tk.Tk()
         root.title("Error!")
+        root.geometry("300x100")
 
         exceptionLabel = tk.Label(root, text=f"An exception occured: {e}")
         exceptionLabel.pack()
@@ -101,7 +102,8 @@ def get_apod():
         root.mainloop()
 
 def set_apod_as_wallpaper(image_path):
-    pass
+    SPI_SETDESKWALLPAPER = 20
+    ctypes.windll.user32.SystemParametersInfoW(SPI_SETDESKWALLPAPER, 0, image_path, 0)
 
 
 # get the apod
@@ -109,7 +111,43 @@ image_path = get_apod()
 print('ladies and gentlemen, we gottem (the apod)')
 
 # check if video
+if image_path == None:
+    # it is
+    # remember to add the thing where they can download the one from yesterday
 
-# set it as the wallpaper
+    def end():
+        root.destroy()
+        exit()
+    root = tk.Tk()
+    root.title("APOD Is Video")
+    root.geometry("300x100")
+
+    label = tk.Label(root, text="APOD for the day is a video")
+    label.pack()
+
+    okButton = tk.Button(root, text="Ok", command=end)
+    okButton.pack()
+
+    root.mainloop()
+else:
+    # yay
+    # set it as the wallpaper
+    set_apod_as_wallpaper(image_path)
 
 # notify the user that it has been set as the wallpaper
+
+def end():
+    root.destroy()
+    exit()
+
+root = tk.Tk()
+root.title("Success!")
+root.geometry("300x100")
+
+label = tk.Label(root, text="Your wallpaper has beeen set :D")
+label.pack()
+
+okButton = tk.Button(root, text="Ok", command=end)
+okButton.pack()
+
+root.mainloop()
