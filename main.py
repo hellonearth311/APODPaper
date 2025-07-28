@@ -12,7 +12,6 @@ Version: 1.0.0
 import sys
 import os
 
-# Add src directory to Python path
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), 'src'))
 
 import customtkinter as ctk
@@ -22,5 +21,5 @@ if __name__ == "__main__":
     root = ctk.CTk()
     from src.gui import WindowUtils
     WindowUtils.set_window_icon(root)
-    root.withdraw()  # Hide until needed
+    root.withdraw()
     main(root)

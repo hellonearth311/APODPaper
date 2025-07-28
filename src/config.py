@@ -64,3 +64,25 @@ class Config:
         config["auto_update"] = not config.get("auto_update", True)
         self.save_config(config)
         return config["auto_update"]
+    
+    def get_hd_preference(self):
+        """Get HD image preference"""
+        config = self.get_config()
+        return config.get("hd_images", True)
+    
+    def set_hd_preference(self, hd_enabled):
+        """Set HD image preference"""
+        config = self.get_config()
+        config["hd_images"] = hd_enabled
+        self.save_config(config)
+    
+    def get_random_image_preference(self):
+        """Get random image preference"""
+        config = self.get_config()
+        return config.get("random_images", False)
+    
+    def set_random_image_preference(self, random_enabled):
+        """Set random image preference"""
+        config = self.get_config()
+        config["random_images"] = random_enabled
+        self.save_config(config)

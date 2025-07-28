@@ -214,19 +214,39 @@ class NotificationWindow:
         """Show an enhanced notification window using CustomTkinter"""
         def create_notification():
             try:
-                # Ensure message is a string
-                msg_str = str(message) if message is not None else ""
+                # Comprehensive message validation and type conversion
+                if message is None:
+                    msg_str = ""
+                elif isinstance(message, str):
+                    msg_str = message
+                else:
+                    msg_str = str(message)
+                
+                # Provide default for success notifications
+                if notification_type == "success" and (not msg_str or msg_str.strip() == ""):
+                    msg_str = "Operation completed successfully!"
+                
+                print(f"Creating notification: title='{title}', type='{notification_type}', message_length={len(msg_str)}")
+                
                 # Create notification window
                 notification = ctk.CTkToplevel(parent)
                 notification.title(title)
 
-                # Calculate window size
+                # Calculate window size with proper type checking
                 lines = msg_str.count('\n') + 1
                 try:
-                    width = min(max(len(msg_str) * 8, 350), 450)
-                except Exception:
+                    # Ensure we're working with integers throughout
+                    msg_length = len(str(msg_str))
+                    width = min(max(msg_length * 8, 350), 450)
+                    width = int(width)
+                    height = min(max(lines * 25 + 120, 180), 280)
+                    height = int(height)
+                except Exception as e:
+                    print(f"Width calculation error: {e}")
                     width = 350
-                height = min(max(lines * 25 + 120, 180), 280)
+                    height = 200
+
+                print(f"Notification window size: {width}x{height}")
 
                 # Center the notification window on the screen
                 notification.update_idletasks()
@@ -253,13 +273,13 @@ class NotificationWindow:
 
                 # Determine icon and color
                 icon = icons.get(notification_type, "ℹ️")
-                if "success" in title.lower():
+                if "success" in title.lower() or notification_type == "success":
                     icon = icons["success"]
                     header_color = Theme.SUCCESS
-                elif "error" in title.lower():
+                elif "error" in title.lower() or notification_type == "error":
                     icon = icons["error"]
                     header_color = Theme.ERROR
-                elif "settings" in title.lower():
+                elif "settings" in title.lower() or notification_type == "settings":
                     icon = icons["settings"]
                     header_color = Theme.ACCENT
                 else:
@@ -290,13 +310,22 @@ class NotificationWindow:
                 content_frame.grid_columnconfigure(0, weight=1)
                 content_frame.grid_rowconfigure(0, weight=1)
 
-                # Message label
+                # Message label with safe wraplength calculation
+                try:
+                    # Ensure width is an integer and calculate safe wrap length
+                    safe_width = int(width) if isinstance(width, (int, float)) else 350
+                    wrap_length = max(safe_width - 60, 200)
+                    wrap_length = int(wrap_length)
+                except Exception as e:
+                    print(f"Wraplength calculation error: {e}")
+                    wrap_length = 290
+                    
                 message_label = ctk.CTkLabel(
                     content_frame,
-                    text=message,
+                    text=msg_str,
                     font=ctk.CTkFont(size=13),
                     text_color=Theme.TEXT,
-                    wraplength=width-60,
+                    wraplength=wrap_length,
                     justify="center"
                 )
                 message_label.grid(row=0, column=0, pady=10)
@@ -313,10 +342,6 @@ class NotificationWindow:
                 )
                 ok_button.grid(row=1, column=0, pady=10)
 
-                # Ensure success notification has proper content
-                if notification_type == "success" and not message:
-                    msg_str = "Operation completed successfully!"
-
                 # Auto-close after 7 seconds
                 notification.after(7000, notification.destroy)
 
@@ -324,8 +349,7 @@ class NotificationWindow:
                 notification.focus()
                 notification.lift()
 
-                # Keep window reference to prevent garbage collection
-                notification.wait_window()
+                # Don't use wait_window() as it can interfere with other dialogs
 
             except Exception as e:
                 print(f"Notification error: {e}")
