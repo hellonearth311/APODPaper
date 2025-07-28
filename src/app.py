@@ -12,14 +12,14 @@ try:
     from .config import Config
     from .apod_client import APODClient
     from .wallpaper import WallpaperManager
-    from .gui import APIKeyDialog, NotificationWindow, UnsupportedOSWindow, WindowUtils
+    from .gui import APIKeyDialog, UnsupportedOSWindow, WindowUtils, show_info
     from .system_tray import SystemTray
     from .scheduler import Scheduler
 except:
     from config import Config
     from apod_client import APODClient
     from wallpaper import WallpaperManager
-    from gui import APIKeyDialog, NotificationWindow, UnsupportedOSWindow, WindowUtils
+    from gui import APIKeyDialog, UnsupportedOSWindow, WindowUtils, show_info
     from system_tray import SystemTray
     from scheduler import Scheduler
 
@@ -87,33 +87,34 @@ class APODPaperApp:
     
     def manual_update(self, icon=None, item=None):
         """Manually update wallpaper"""
-        try:
-            hd_enabled = self.config.get_hd_preference()
-            random_enabled = self.config.get_random_image_preference()
-            
-            result = self.apod_client.download_with_fallback(hd=hd_enabled, random_date=random_enabled)
-            if result:
-                image_path, apod_data = result
-                if self.wallpaper_manager.set_wallpaper(image_path):
-                    self.config.update_last_update()
-                    title = apod_data.get('title', 'Unknown')
-                    quality = " (HD)" if hd_enabled and "hdurl" in apod_data else ""
-                    random_text = " (Random)" if random_enabled else ""
-                    NotificationWindow.show("Success!", 
-                                          f"Wallpaper updated successfully!{quality}{random_text}\n\n{title}", 
-                                          "success", parent=self.root)
+        def do_update():
+            try:
+                hd_enabled = self.config.get_hd_preference()
+                random_enabled = self.config.get_random_image_preference()
+                
+                result = self.apod_client.download_with_fallback(hd=hd_enabled, random_date=random_enabled)
+                if result:
+                    image_path, apod_data = result
+                    if self.wallpaper_manager.set_wallpaper(image_path):
+                        self.config.update_last_update()
+                        # Schedule dialog creation on main thread
+                        self.root.after(0, lambda: self._show_success_dialog("Successfully updated wallpaper!"))
+                    else:
+                        self.root.after(0, lambda: self._show_error_dialog("Could not update", "Failed to update wallpaper :("))
                 else:
-                    NotificationWindow.show("Error", "Failed to set wallpaper", "error", parent=self.root)
-            else:
-                NotificationWindow.show("Error", "Could not download APOD image", "error", parent=self.root)
-        except Exception as e:
-            NotificationWindow.show("Error", f"Update failed: {str(e)}", "error", parent=self.root)
+                    self.root.after(0, lambda: self._show_warning_dialog("Could not download image", "Failed to download image. Perhaps your API key is wrong?"))
+            except Exception as e:
+                self.root.after(0, lambda: self._show_error_dialog("Unknown Error", f"We encountered an unknown error updating the APOD \n {e} \n Please create an issue on GitHub!"))
+        
+        # Run the update in a separate thread to avoid blocking the UI
+        import threading
+        threading.Thread(target=do_update, daemon=True).start()
     
     def toggle_auto_update(self, icon=None, item=None):
         """Toggle automatic updates on/off"""
         auto_update_enabled = self.config.toggle_auto_update()
         status = "enabled" if auto_update_enabled else "disabled"
-        NotificationWindow.show("Settings", f"Auto-update {status}", "settings", parent=self.root)
+        show_info(self.root, "Settings", f"Auto-update {status}", "gear")
         
         # Restart scheduler with new settings
         if auto_update_enabled:
@@ -293,7 +294,7 @@ class APODPaperApp:
             # Save random preference
             self.config.set_random_image_preference(random_switch.get() == 1)
             
-            NotificationWindow.show("Settings", "Settings saved successfully!", "settings", parent=self.root)
+            show_info(self.root, "Settings", "Settings saved successfully!", "gear")
             settings_dialog.destroy()
 
         def cancel_settings():
@@ -426,6 +427,36 @@ class APODPaperApp:
                     print(f"removed {filepath}")
                 except OSError as e:
                     print(f"error removing file {filepath}: {e}")
+
+    def _show_success_dialog(self, message):
+        """Show success dialog on main thread"""
+        dialog = show_info(self._get_dialog_parent(), "Success", message, "success")
+        # Keep dialog open by forcing focus and waiting
+        self._ensure_dialog_stays_open(dialog)
+
+    def _show_error_dialog(self, title, message):
+        """Show error dialog on main thread"""
+        dialog = show_info(self._get_dialog_parent(), title, message, "error")
+        self._ensure_dialog_stays_open(dialog)
+
+    def _show_warning_dialog(self, title, message):
+        """Show warning dialog on main thread"""
+        dialog = show_info(self._get_dialog_parent(), title, message, "warning")
+        self._ensure_dialog_stays_open(dialog)
+
+    def _get_dialog_parent(self):
+        """Get appropriate parent for dialogs"""
+        # Always use root as parent - it should be available even if withdrawn
+        return self.root
+
+    def _ensure_dialog_stays_open(self, dialog):
+        """Ensure dialog stays open and is properly focused"""
+        dialog.attributes("-topmost", True)
+        dialog.lift()
+        dialog.focus_force()
+        # Make sure dialog doesn't get destroyed immediately
+        dialog.grab_set()
+        dialog.wait_window()
 
 
 def main(root):

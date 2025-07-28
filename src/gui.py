@@ -4,7 +4,7 @@ GUI components and windows for APODPaper using CustomTkinter
 import customtkinter as ctk
 import tkinter as tk
 import threading
-from PIL import Image
+from PIL import Image, ImageDraw, ImageFont
 import io
 import os
 
@@ -207,168 +207,6 @@ class APIKeyDialog:
         dialog.wait_window()
         return self.api_key
 
-
-class NotificationWindow:
-    @staticmethod
-    def show(title, message, notification_type="info", parent=None):
-        """Show an enhanced notification window using CustomTkinter"""
-        def create_notification():
-            try:
-                # Comprehensive message validation and type conversion
-                if message is None:
-                    msg_str = ""
-                elif isinstance(message, str):
-                    msg_str = message
-                else:
-                    msg_str = str(message)
-                
-                # Provide default for success notifications
-                if notification_type == "success" and (not msg_str or msg_str.strip() == ""):
-                    msg_str = "Operation completed successfully!"
-                
-                print(f"Creating notification: title='{title}', type='{notification_type}', message_length={len(msg_str)}")
-                
-                # Create notification window
-                notification = ctk.CTkToplevel(parent)
-                notification.title(title)
-
-                # Calculate window size with proper type checking
-                lines = msg_str.count('\n') + 1
-                try:
-                    # Ensure we're working with integers throughout
-                    msg_length = len(str(msg_str))
-                    width = min(max(msg_length * 8, 350), 450)
-                    width = int(width)
-                    height = min(max(lines * 25 + 120, 180), 280)
-                    height = int(height)
-                except Exception as e:
-                    print(f"Width calculation error: {e}")
-                    width = 350
-                    height = 200
-
-                print(f"Notification window size: {width}x{height}")
-
-                # Center the notification window on the screen
-                notification.update_idletasks()
-                x = (notification.winfo_screenwidth() // 2) - (width // 2)
-                y = (notification.winfo_screenheight() // 2) - (height // 2)
-                notification.geometry(f"{width}x{height}+{x}+{y}")
-                notification.attributes("-topmost", True)
-                notification.resizable(False, False)
-
-                WindowUtils.set_window_icon(notification)
-
-                # Configure grid
-                notification.grid_columnconfigure(0, weight=1)
-                notification.grid_rowconfigure(1, weight=1)
-
-                # Icon mapping
-                icons = {
-                    "success": "✅",
-                    "error": "❌",
-                    "warning": "⚠️",
-                    "info": "ℹ️",
-                    "settings": "⚙️"
-                }
-
-                # Determine icon and color
-                icon = icons.get(notification_type, "ℹ️")
-                if "success" in title.lower() or notification_type == "success":
-                    icon = icons["success"]
-                    header_color = Theme.SUCCESS
-                elif "error" in title.lower() or notification_type == "error":
-                    icon = icons["error"]
-                    header_color = Theme.ERROR
-                elif "settings" in title.lower() or notification_type == "settings":
-                    icon = icons["settings"]
-                    header_color = Theme.ACCENT
-                else:
-                    header_color = Theme.ACCENT
-
-                # Header frame
-                header_frame = ctk.CTkFrame(
-                    notification,
-                    height=60,
-                    fg_color=header_color,
-                    corner_radius=(10, 10, 0, 0)
-                )
-                header_frame.grid(row=0, column=0, sticky="ew", padx=0, pady=0)
-                header_frame.grid_propagate(False)
-
-                # Header label
-                header_label = ctk.CTkLabel(
-                    header_frame,
-                    text=f"{icon} {title}",
-                    font=ctk.CTkFont(size=16, weight="bold"),
-                    text_color="white"
-                )
-                header_label.pack(pady=20)
-
-                # Content frame
-                content_frame = ctk.CTkFrame(notification, fg_color="transparent")
-                content_frame.grid(row=1, column=0, sticky="nsew", padx=20, pady=15)
-                content_frame.grid_columnconfigure(0, weight=1)
-                content_frame.grid_rowconfigure(0, weight=1)
-
-                # Message label with safe wraplength calculation
-                try:
-                    # Ensure width is an integer and calculate safe wrap length
-                    safe_width = int(width) if isinstance(width, (int, float)) else 350
-                    wrap_length = max(safe_width - 60, 200)
-                    wrap_length = int(wrap_length)
-                except Exception as e:
-                    print(f"Wraplength calculation error: {e}")
-                    wrap_length = 290
-                    
-                message_label = ctk.CTkLabel(
-                    content_frame,
-                    text=msg_str,
-                    font=ctk.CTkFont(size=13),
-                    text_color=Theme.TEXT,
-                    wraplength=wrap_length,
-                    justify="center"
-                )
-                message_label.grid(row=0, column=0, pady=10)
-
-                # OK button
-                ok_button = ctk.CTkButton(
-                    content_frame,
-                    text="OK",
-                    command=notification.destroy,
-                    fg_color=Theme.ACCENT,
-                    hover_color=Theme.ACCENT_HOVER,
-                    width=80,
-                    height=32
-                )
-                ok_button.grid(row=1, column=0, pady=10)
-
-                # Auto-close after 7 seconds
-                notification.after(7000, notification.destroy)
-
-                # Focus and show
-                notification.focus()
-                notification.lift()
-
-                # Don't use wait_window() as it can interfere with other dialogs
-
-            except Exception as e:
-                print(f"Notification error: {e}")
-
-        # Run in main thread using after_idle
-        try:
-            # Try to schedule in main thread
-            import tkinter as tk
-            root = tk._default_root
-            if root:
-                root.after_idle(create_notification)
-            else:
-                # Fallback to thread if no main loop
-                threading.Thread(target=create_notification, daemon=True).start()
-        except:
-            # Final fallback
-            threading.Thread(target=create_notification, daemon=True).start()
-
-
 class UnsupportedOSWindow:
     @staticmethod
     def show(parent):
@@ -437,3 +275,187 @@ class UnsupportedOSWindow:
         dialog.grab_set()
         parent.deiconify()
         dialog.wait_window()
+
+def create_emoji_image(emoji_text, size=100):
+    # Create a larger canvas to avoid clipping
+    canvas_size = int(size * 1.4)  # Increased buffer for better centering
+    img = Image.new('RGBA', (canvas_size, canvas_size), (0, 0, 0, 0))
+    draw = ImageDraw.Draw(img)
+    
+    try:
+        font_size = int(size * 0.75)  # Slightly smaller font for better fit
+        font = ImageFont.truetype("seguiemj.ttf", font_size)
+    except:
+        font = ImageFont.load_default()
+    
+    # Get text bounding box
+    bbox = draw.textbbox((0, 0), emoji_text, font=font)
+    text_width = bbox[2] - bbox[0]
+    text_height = bbox[3] - bbox[1]
+    
+    # Calculate center position with extra adjustments for specific emojis
+    center_x = canvas_size // 2
+    center_y = canvas_size // 2
+    
+    # Emoji-specific adjustments for better centering
+    offset_x = 0
+    offset_y = 0
+    
+    if emoji_text == "⚙️":  # Gear
+        offset_x = 40
+        offset_y = -3
+    elif emoji_text == "⚠️":  # Warning
+        offset_x = 40
+        offset_y = -2
+    elif emoji_text == "❌":  # Error
+        offset_x = 0
+        offset_y = -1
+    elif emoji_text == "✅":  # Success
+        offset_x = 0
+        offset_y = -1
+    
+    # Calculate final position
+    x = center_x - (text_width // 2) - bbox[0] + offset_x
+    y = center_y - (text_height // 2) - bbox[1] + offset_y
+    
+    # Draw emoji with adjusted positioning
+    draw.text((x, y), emoji_text, font=font, embedded_color=True)
+    
+    # Resize back to the requested size while maintaining aspect ratio
+    img = img.resize((size, size), Image.Resampling.LANCZOS)
+    
+    return img
+
+def show_info(parent, title, message, icon_type):
+    # validate types
+    title = str(title)
+    message = str(message)
+    icon_type = str(icon_type).lower()
+
+    # Icon mapping
+    icon_map = {
+        "success": "✅",
+        "warning": "⚠️", 
+        "error": "❌",
+        "gear": "⚙️"
+    }
+    
+    # Get the emoji or default to info
+    emoji = icon_map.get(icon_type, "ℹ️")
+
+    dialog = ctk.CTkToplevel(parent)
+    dialog.title(title)
+    dialog.geometry("400x350")
+    dialog.resizable(False, False)
+    
+    # Apply theme
+    dialog.configure(fg_color=Theme.SPACE_BLACK)
+    WindowUtils.set_window_icon(dialog)
+
+    # Create main container
+    main_frame = ctk.CTkFrame(dialog, fg_color="transparent")
+    main_frame.pack(fill="both", expand=True, padx=20, pady=20)
+    
+    # Icon section
+    icon_frame = ctk.CTkFrame(main_frame, fg_color="transparent", height=120)
+    icon_frame.pack(fill="x", pady=(0, 20))
+    icon_frame.pack_propagate(False)
+    
+    # Create emoji image with proper sizing based on type
+    icon_size = 80
+    if icon_type in ["warning", "error"]:
+        icon_size = 75  # Slightly smaller for better balance
+    elif icon_type == "gear":
+        icon_size = 85  # Slightly larger for gear
+    
+    icon_img = ctk.CTkImage(
+        light_image=create_emoji_image(emoji, size=icon_size), 
+        size=(icon_size, icon_size)
+    )
+
+    icon_label = ctk.CTkLabel(
+        icon_frame, 
+        image=icon_img, 
+        text="",
+        fg_color="transparent"
+    )
+    icon_label.pack(expand=True)
+    
+    # Message section with proper centering and wrapping
+    message_frame = ctk.CTkFrame(main_frame, fg_color="transparent")
+    message_frame.pack(fill="both", expand=True)
+    
+    # Calculate wrap length based on dialog width
+    wrap_length = 320  # Leave margin for padding
+    
+    message_label = ctk.CTkLabel(
+        message_frame,
+        text=message,
+        font=ctk.CTkFont(size=14),
+        text_color=Theme.TEXT,
+        wraplength=wrap_length,
+        justify="center",
+        fg_color="transparent"
+    )
+    message_label.pack(expand=True, fill="both", pady=(0, 20))
+    
+    # OK button
+    button_frame = ctk.CTkFrame(main_frame, fg_color="transparent", height=50)
+    button_frame.pack(fill="x")
+    button_frame.pack_propagate(False)
+    
+    ok_button = ctk.CTkButton(
+        button_frame,
+        text="OK",
+        command=dialog.destroy,
+        fg_color=Theme.ACCENT,
+        hover_color=Theme.ACCENT_HOVER,
+        width=100,
+        height=35
+    )
+    ok_button.pack(expand=True)
+    
+    # Center the dialog
+    dialog.update_idletasks()
+    x = (dialog.winfo_screenwidth() // 2) - (dialog.winfo_width() // 2)
+    y = (dialog.winfo_screenheight() // 2) - (dialog.winfo_height() // 2)
+    dialog.geometry(f"+{x}+{y}")
+    
+    # Make it modal but handle withdrawn parent
+    if parent and parent.winfo_viewable():
+        dialog.transient(parent)
+        dialog.grab_set()
+    else:
+        # If parent is withdrawn, just make it stay on top
+        dialog.attributes("-topmost", True)
+        dialog.grab_set()
+    
+    dialog.focus_set()
+    dialog.lift()
+    
+    return dialog
+
+if __name__ == "__main__":
+    root = ctk.CTk()
+    root.geometry("500x500")
+
+    # Test different icon types
+    def test_success():
+        show_info(root, "Success!", "Operation completed successfully! This is a longer message to test text wrapping capabilities.", "success")
+    
+    def test_warning():
+        show_info(root, "Warning", "This is a warning message that might be quite long and should wrap properly to multiple lines.", "warning")
+    
+    def test_error():
+        show_info(root, "Error", "An error occurred during the operation.", "error")
+    
+    def test_gear():
+        show_info(root, "Settings", "Settings have been updated successfully!", "gear")
+
+    # Create test buttons
+    ctk.CTkButton(root, text="Test Success", command=test_success).pack(pady=10)
+    ctk.CTkButton(root, text="Test Warning", command=test_warning).pack(pady=10)
+    ctk.CTkButton(root, text="Test Error", command=test_error).pack(pady=10)
+    ctk.CTkButton(root, text="Test Gear", command=test_gear).pack(pady=10)
+
+    root.mainloop()
