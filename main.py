@@ -6,7 +6,7 @@ Automatically downloads and sets your desktop wallpaper to NASA's
 daily Astronomy Picture of the Day (APOD).
 
 Author: Swarit Narang
-Version: 1.0.0
+Version: 1.1.0
 """
 
 import sys

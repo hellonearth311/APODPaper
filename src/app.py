@@ -347,7 +347,7 @@ class APODPaperApp:
         # Text content
         text_label = ctk.CTkLabel(
             about_dialog,
-            text="APODPaper v1.0.0\n\nNASA Astronomy Picture of the Day\nWallpaper Application",
+            text="APODPaper v1.1.0\n\nNASA Astronomy Picture of the Day\nWallpaper Application",
             font=ctk.CTkFont(size=14),
             text_color=Theme.TEXT
         )
