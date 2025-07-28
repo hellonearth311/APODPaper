@@ -32,6 +32,7 @@ class SystemTray:
         return pystray.Menu(
             pystray.MenuItem("Update Wallpaper", self.app.manual_update),
             pystray.MenuItem("Toggle Auto-Update", self.app.toggle_auto_update),
+            pystray.MenuItem("Clean Up", self.app.clean_folder),
             pystray.Menu.SEPARATOR,
             pystray.MenuItem("Settings", self.app.show_settings),
             pystray.MenuItem("About", self.app.show_about),

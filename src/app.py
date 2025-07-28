@@ -408,6 +408,24 @@ class APODPaperApp:
         tray_icon = self.system_tray.setup()
         tray_thread = threading.Thread(target=tray_icon.run, daemon=True)
         tray_thread.start()
+    
+    def clean_folder(self):
+        """
+        Delete all saved image files to save storage
+        """
+        local_app_data_path = os.getenv("LOCALAPPDATA")
+        path = os.path.join(local_app_data_path, "apodpaper")
+        extensions = ["png", "jpg", "jpeg", "gif"]
+
+        for filename in os.listdir(path):
+            ext = filename.split(".")[1]
+            if ext in extensions:
+                filepath = os.path.join(path, filename)
+                try:
+                    os.remove(filepath)
+                    print(f"removed {filepath}")
+                except OSError as e:
+                    print(f"error removing file {filepath}: {e}")
 
 
 def main(root):
@@ -418,4 +436,7 @@ def main(root):
 
 
 if __name__ == "__main__":
-    main()
+    import customtkinter as ctk
+    root = ctk.CTk()
+    root.withdraw()
+    main(root)
