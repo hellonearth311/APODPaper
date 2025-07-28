@@ -107,14 +107,33 @@ To reset the application:
 
 ## 🏗️ Building from Source
 
-To create your own executable:
+To create your own executable, you have several options:
 
+### Option 1: Automated Build Script (Recommended)
+```bash
+# Run the automated build script
+build.bat
+
+# Or for PowerShell users
+powershell -ExecutionPolicy Bypass -File build.ps1
+```
+
+### Option 2: Simple Build (If you encounter DLL issues)
+```bash
+# Use the alternative build method
+build-simple.bat
+```
+
+### Option 3: Manual Build
 ```bash
 # Install PyInstaller
 pip install pyinstaller
 
-# Build executable
+# Build using spec file
 pyinstaller main.spec
+
+# Or build with basic options
+pyinstaller --onefile --windowed --name "APODPaper" --noupx main.py
 ```
 
 The executable will be created in the `dist/` folder.
